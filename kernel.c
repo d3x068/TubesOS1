@@ -6,13 +6,8 @@
 #define DIR_ENTRY_LENGTH 32 
 #define MAP_SECTOR 1 
 #define DIR_SECTOR 2 
-#define TRUE 1
-#define FALSE 0
 #define INSUFFICIENT_SECTORS 0 
-#define NOT_FOUND -1
 #define INSUFFICIENT_DIR_ENTRIES -1 
-#define EMPTY 0x00
-#define USED 0xFF
 
 /* Ini deklarasi fungsi */
 void handleInterrupt21 (int AX, int BX, int CX, int DX);
@@ -123,13 +118,13 @@ void readFile(char *buffer, char *filename, int *success){
 
 	readSector(dir, DIR_SECTOR);
 	for(i = 0; i < SECTOR_SIZE; i += DIR_ENTRY_LENGTH) {
-		found = TRUE;
+		found = 1;
 		for(j = 0; j < MAX_FILENAME; j++) {
 			if(dir[i + j] == '\0' && filename[j] == '\0') {
 				break;
 			}
 			if(dir[i + j] != filename[j]) {
-				found = FALSE;
+				found = 0;
 				break;
 			}
 		}
@@ -141,7 +136,7 @@ void readFile(char *buffer, char *filename, int *success){
 				readSector(buffer + i * SECTOR_SIZE, dir[j + i]);
 				i++;
 			}
-			*success = TRUE;
+			*success = 1;
 			return;	
 		}
 	}
@@ -172,7 +167,7 @@ void writeFile(char *buffer, char *filename, int *sectors){
 	if (dirIndex < MAX_FILES) {
 		int i, j, sectorCount;
 		for (i = 0, sectorCount = 0; i < MAX_BYTE && sectorCount < *sectors; ++i) {
-			if (map[i] == EMPTY) {
+			if (map[i] == 0x00) {
 				++sectorCount; 
 			}
 		}
@@ -190,8 +185,8 @@ void writeFile(char *buffer, char *filename, int *sectors){
 				}
 			}
 			for (i = 0, sectorCount = 0; i < MAX_BYTE && sectorCount < *sectors; ++i) {
-				if (map[i] == EMPTY) {
-					map[i] = USED;
+				if (map[i] == 0x00) {
+					map[i] = 0xFF;
 					dir[dirIndex * DIR_ENTRY_LENGTH + MAX_FILENAME + sectorCount] = i;
 					clear(sectorBuffer, SECTOR_SIZE); 
 					for (j = 0; j < SECTOR_SIZE; ++j) {
