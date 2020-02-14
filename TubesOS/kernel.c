@@ -29,20 +29,21 @@ int main () {
   char buf[SECTOR_SIZE * MAX_SECTORS];
   int succ;
   makeInterrupt21();
-  printString("Selamat Datang Di Operating System");
+  printString("Halo !!, Selamat Datang Di Operating System");
 
   executeProgram(&"milestone1", 0x2000, &succ);
-
-
-  interrupt(0x21, 0x4, &buf, "key.txt", &succ);
-  if(succ){
-    interrupt(0x21, 0x0, &buf, 0, 0);
-  }else{
-    interrupt(0x21, 0x6, "milestone1", 0x2000, &succ);
-  }
-
+  
+    // interrupt(0x21, 0x4, &buf, "key.txt", &succ);
+    // if(succ){
+    //   interrupt(0x21, 0x0, &buf, 0, 0);
+    // }else{
+    //   interrupt(0x21, 0x6, "milestone1", 0x2000, &succ);
+    // }
+  
 
   while(1){
+
+  
     // readString(&buf);
     // printString(&buf);
     // clear(&buf,SECTOR_SIZE * MAX_SECTORS);
@@ -79,12 +80,13 @@ void handleInterrupt21(int AX, int BX, int CX, int DX){
 }
 void printString(char *string) {
   int i = 0;
-  while(string[i] != '\0') {
-    interrupt(0x10, 0xE00 + string[i], 0, 0, 0);
-    i++;
+  char c = string[i];
+  while(c != '\0') {
+    interrupt(0x10, 0xE*256 + c, 0, 0, 0);
+    c = string[i++];
   }
-  interrupt(0x10, 0xE00 + '\n', 0, 0, 0);
-  interrupt(0x10, 0xE00 + '\r', 0, 0, 0);
+  interrupt(0x10, 0xE*256 + '\n', 0, 0, 0);
+  interrupt(0x10, 0xE*256 + '\r', 0, 0, 0);
 }
 
 void readString(char *string) {
