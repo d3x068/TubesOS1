@@ -23,94 +23,96 @@ int div(int p,int q);
 int mod(int p,int q);
 
 int main () {
-  // putInMemory(0xB000, 0x8000, 'H');
-  // putInMemory(0xB000, 0x8001, 0xD);
-  // putInMemory(0xB000, 0x8002, 'a');
-  // putInMemory(0xB000, 0x8003, 0xD);
-  // putInMemory(0xB000, 0x8004, 'i');
-  // putInMemory(0xB000, 0x8005, 0xD);
-  // makeInterrupt21();
-  // interrupt(0x21, 0x0, "hahahaha", 0, 0);
-  // interrupt(0x21, 0x1, buf, 0, 0);
-  // interrupt(0x21, 0x0, "buffer content: ", 0, 0);
-  // interrupt(0x21, 0x0, buf, 0, 0);
 
-  // executeProgram("milestone1", 0x2000);
+
   // while(1);
-  // char buf[SECTOR_SIZE * MAX_SECTORS];
-  // int succ;
+  char buf[SECTOR_SIZE * MAX_SECTORS];
+  int succ;
   makeInterrupt21();
-  printString("KITA ADALAH");
+  printString("Halo !!, Selamat Datang Di Operating System");
 
+  executeProgram(&"milestone1", 0x2000, &succ);
+  
+    // interrupt(0x21, 0x4, &buf, "key.txt", &succ);
+    // if(succ){
+    //   interrupt(0x21, 0x0, &buf, 0, 0);
+    // }else{
+    //   interrupt(0x21, 0x6, "milestone1", 0x2000, &succ);
+    // }
+  
 
-  // interrupt(0x21, 0x4, buf, "key.txt", &succ);
-  // if(succ) {
-  //   interrupt(0x21, 0x0, buf, 0, 0);
-  // } else {
-  //   interrupt(0x21, 0x6, "keyproc", 0x2000, &succ);
-  // }
-  while (1);
-}
+  while(1){
 
-
-void handleInterrupt21(int AX, int BX, int CX, int DX){
-  switch(AX){
-    case 0x0:
-      printString(BX);
-      break;
-    case 0x1:
-      readString(BX);
-      break;
-    case 0x2:
-      readSector(BX, CX);
-      break;
-    case 0x3:
-      writeSector(BX, CX);
-      break;
-    case 0x4:
-      readFile(BX, CX, DX);
-      break;
-    case 0x5:
-      writeFile(BX, CX, DX);
-      break;
-    case 0x6:
-      executeProgram(BX, CX, DX);
-      break;
-    default:
-      printString("Invalid interrupt");
+  
+    // readString(&buf);
+    // printString(&buf);
+    // clear(&buf,SECTOR_SIZE * MAX_SECTORS);
   }
 }
 
-void printString(char *string){
+
+void handleInterrupt21 (int AX, int BX, int CX, int DX) {
+   char AL, AH;
+   AL = (char) (AX);
+   AH = (char) (AX >> 8);
+   switch (AL) {
+      case 0x00:
+         printString(BX);
+         break;
+      case 0x01:
+         readString(BX);
+         break;
+      case 0x02:
+         readSector(BX, CX);
+         break;
+      case 0x03:
+         writeSector(BX, CX);
+         break;
+      case 0x04:
+         readFile(BX, CX, DX, AH);
+         break;
+      case 0x05:
+         writeFile(BX, CX, DX, AH);
+         break;
+      case 0x06:
+         executeProgram(BX, CX, DX, AH);
+         break;
+      default:
+         printString("Invalid interrupt");
+   }
+}
+
+void printString(char *string) {
   int i = 0;
   char c = string[i];
-  while (c != '\0'){
-    interrupt(0x10, 0xE*256 + c, 0, 0, 0);          //interrupt 0x10 untuk menulis string
-    c = string[++i];
+  while(c != '\0') {
+    interrupt(0x10, 0xE*256 + c, 0, 0, 0);
+    c = string[i++];
   }
-  interrupt(0x10, 0xE*256 + '\n',0,0,0);
-  interrupt(0x10, 0xE*256 + '\r',0,0,0);
+  interrupt(0x10, 0xE*256 + '\n', 0, 0, 0);
+  interrupt(0x10, 0xE*256 + '\r', 0, 0, 0);
 }
 
-void readString(char *string){
-  int i;
+void readString(char *string) {
+  int i = 0;
   char c;
-  do {
-    c = interrupt(0x16,0,0,0,0);
-    if (c=='\b'){
-      interrupt(0x10,0xE*256 + '\b',0,0,0);
-      interrupt(0x10,0xE*256 + '\0',0,0,0);
-      interrupt(0x10,0xE*256 + '\b',0,0,0);
+  do{
+    c = interrupt(0x16, 0, 0, 0, 0);
+    if(c == '\b') {
+      interrupt(0x10, 0xE00 + '\b', 0, 0, 0);
+      interrupt(0x10, 0xE00 + '\0', 0, 0, 0);
+      interrupt(0x10, 0xE00 + '\b', 0, 0, 0);
       i--;
-    } else if (c!='\r'){
+    } else if(c != '\r') {
       string[i] = c;
-      interrupt(0x10, 0xE * 256 + c, 0, 0, 0); 
+      interrupt(0x10, 0xE00 + c, 0, 0, 0);
       i++;
-    }
-  } while (c!='\r');
+  }
+} while(c != '\r');
+
   string[i] = '\0';
-  interrupt(0x10, 0xE * 256 + '\n', 0, 0, 0);
-  interrupt(0x10,0xE*256 + '\r',0,0,0);  
+  interrupt(0x10, 0xE00 + '\n', 0, 0, 0);
+  interrupt(0x10, 0xE00 + '\r', 0, 0, 0);
 }
 
 void readSector(char *buffer, int sector){
@@ -172,7 +174,7 @@ void readFile(char *buffer, char *filename, int *success){
 void clear(char *buffer, int length){
   int i;
   for(i=0;i<length;i++){
-    buffer[i] = 0x00;
+    buffer[i] = 0x0;
   }
 } 
 //Fungsi untuk mengisi buffer dengan 0
