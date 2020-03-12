@@ -120,12 +120,16 @@ void readSector(char *buffer, int sector){
 }
 
 int div(int p,int q){
-  int hasil;
-  hasil = 0;
-  while (hasil*q<=p){
-    hasil ++;
-  }
-  return hasil-1;
+  if (p==0){
+      return 0;
+  } else {
+    int x = 0;
+    while (x*q<=p){
+        x ++;
+    }
+    
+    return x-1;
+    } 
 }
 
 int mod(int p, int q){
@@ -139,36 +143,46 @@ void writeSector(char *buffer, int sector){
   interrupt(0x13, 0x301, buffer, div(sector, 36) * 0x100 + mod(sector, 18) + 1, mod(div(sector,18),2) * 0x100);
 }
 
-void readFile(char *buffer, char *filename, int *success){
-  char dir[SECTOR_SIZE];
-  int i, found, j;
+void readFile(char *buffer, char *path, int *result, char parentIndex){
+    //read file with readSector
+    //SECTOR_ENTRY_LENGTH = 16
+    //SECTOR_SIZE = 512
 
-
-  readSector(dir, DIR_SECTOR);
-  for(i = 0; i < SECTOR_SIZE; i += DIR_ENTRY_LENGTH) {
-    found = 1;
-    for(j = 0; j < MAX_FILENAME; j++) {
-      if(dir[i + j] == '\0' && filename[j] == '\0') {
-        break;
+    int letakpath = 0;
+    int idx = 0;
+    int name_offset = 0;
+    int dir_offset = 0;
+    int i = 0;
+    int letakpath = 0;
+    int sec_offset = 0;
+    //mencari index filename pertama kali
+    while (path[i] != '\0'){
+      if (path[i]=='/') {
+        idx = i + 1; //index char pertama di depan /
       }
-      if(dir[i + j] != filename[j]) {
-        found = 0;
-        break;
+      ++i;
+    }
+    i = 0;
+    if (idx == 0) { //tidak ketemu
+      dir_offset = parentIndex;
+    } else {
+      while ( i < 512 ){ //cari dir offset
+        if (path[letakpath] ==parentIndex){
+          i = 513;
+          dir_offset = letakpath;
+        }
+      }
+      if (dir_offset == 0xFF){
+        *result = -1; //File tidak ketemu
       }
     }
-
-    if(found) {
-      j = i + MAX_FILENAME;
-      i = 0;
-      while(i < MAX_SECTORS && dir[i + j] != 0) {
-        readSector(buffer + i * SECTOR_SIZE, dir[j + i]);
-        i++;
-      }
-      *success = 1;
-      return; 
+    i = 0;
+    char sector[512];
+    while(sector[i*16 + sec_offset]!='\0' && sec_offset<16){
+      readSector(buffer+sec_offset*512,sector[i*16+sec_offset]);
+      ++i;
+      ++sec_offset;
     }
-  }
-  *success = found;
 }
 
 void clear(char *buffer, int length){
@@ -178,59 +192,8 @@ void clear(char *buffer, int length){
   }
 } 
 //Fungsi untuk mengisi buffer dengan 0
-void writeFile(char *buffer, char *filename, int *sectors){
-  char map[SECTOR_SIZE];
-  char dir[SECTOR_SIZE];
-  char sectorBuffer[SECTOR_SIZE]; 
-  int dirIndex;
+void writeFile(char *buffer, char *path,int *sectors, char parentIndex){
 
-  readSector(map, MAP_SECTOR); 
-  readSector(dir, DIR_SECTOR);
-  for (dirIndex = 0; dirIndex < MAX_FILES; ++dirIndex) { 
-    if (dir[dirIndex * DIR_ENTRY_LENGTH] == '\0') {
-      break; 
-    }
-  }
-
-  if (dirIndex < MAX_FILES) {
-    int i, j, sectorCount;
-    for (i = 0, sectorCount = 0; i < MAX_BYTE && sectorCount < *sectors; ++i) {
-      if (map[i] == 0x00) {
-        ++sectorCount; 
-      }
-    }
-
-    if (sectorCount < *sectors) {
-      *sectors = INSUFFICIENT_SECTORS;
-      return; 
-    } else {
-      clear(dir + dirIndex * DIR_ENTRY_LENGTH, DIR_ENTRY_LENGTH); 
-      for (i = 0; i < MAX_FILENAME; ++i) {
-        if (filename[i] != '\0') {
-          dir[dirIndex * DIR_ENTRY_LENGTH + i] = filename[i];
-        } else {
-          break; 
-        }
-      }
-      for (i = 0, sectorCount = 0; i < MAX_BYTE && sectorCount < *sectors; ++i) {
-        if (map[i] == 0x00) {
-          map[i] = 0xFF;
-          dir[dirIndex * DIR_ENTRY_LENGTH + MAX_FILENAME + sectorCount] = i;
-          clear(sectorBuffer, SECTOR_SIZE); 
-          for (j = 0; j < SECTOR_SIZE; ++j) {
-            sectorBuffer[j] = buffer[sectorCount * SECTOR_SIZE + j]; 
-          }
-          writeSector(sectorBuffer, i);
-          ++sectorCount; 
-        }
-      } 
-    }
-  } else {
-    *sectors = INSUFFICIENT_DIR_ENTRIES;
-    return; 
-  }
-  writeSector(map, MAP_SECTOR); 
-  writeSector(dir, DIR_SECTOR);
 }
 
 void executeProgram(char *filename, int segment, int *success){
